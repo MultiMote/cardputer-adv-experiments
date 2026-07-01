@@ -34,6 +34,10 @@ void loop() {
                   event.modifiers.shift, event.modifiers.opt,
                   event.modifiers.alt, event.modifiers.ctrl,
                   event.modifiers.fn);
+
+    if (event.down) {
+      speaker.playTone(500.0f + event.key * 50, 60);
+    }
   }
   delay(10);
 }
