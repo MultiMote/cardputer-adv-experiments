@@ -48,8 +48,8 @@ Keyboard::Event CardputerKeyboard::poll() {
     e &= 0x7F;
 
     // Normalize key code to remove gaps
-    Keyboard::Key key =
-        static_cast<Keyboard::Key>(((e - 1) / 10) * 8 + ((e - 1) % 10));
+    uint8_t key_index = ((e - 1) / 10) * 8 + ((e - 1) % 10) + 1;
+    Keyboard::Key key = static_cast<Keyboard::Key>(key_index);
 
     if (isModifier(key)) {
       updateModifier(key, down);
