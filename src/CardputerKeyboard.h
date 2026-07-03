@@ -98,10 +98,17 @@ enum Key : uint8_t {
   KEY_SLASH = 52,
 
   // Column 14
-  KEY_BACK = 53,
+  KEY_BACKSPACE = 53,
   KEY_BACKSLASH = 54,
   KEY_RETURN = 55,
   KEY_SPACE = 56
+};
+
+enum Arrow : uint8_t {
+  ARROW_LEFT = 44,
+  ARROW_UP = 47,
+  ARROW_DOWN = 48,
+  ARROW_RIGHT = 52,
 };
 
 struct Modifiers {

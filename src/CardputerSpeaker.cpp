@@ -8,7 +8,6 @@
 void CardputerSpeaker::initI2C() {
   // From M5Unified
   writeReg(0x00, 0x80); // 0x00 RESET/  CSM POWER ON
-  delay(2);
   writeReg(0x01, 0xB5); // 0x01 CLOCK_MANAGER/ MCLK=BCLK
   writeReg(0x02, 0x18); // 0x02 CLOCK_MANAGER/ MULT_PRE=3
   writeReg(0x0D, 0x01); // 0x0D SYSTEM/ Power up analog circuitry
@@ -16,6 +15,10 @@ void CardputerSpeaker::initI2C() {
   writeReg(0x13, 0x10); // 0x13 SYSTEM/ Enable output to HP drive - NOT default
   writeReg(0x32, 0xBF); // 0x32 DAC/ DAC volume (0xBF == ±0 dB )
   writeReg(0x37, 0x08); // 0x37 DAC/ Bypass DAC equalizer - NOT default
+
+  // Codec is not ready immediately, it need some time to stabilize
+  busy_time = millis() + AUDIO_WARMUP_MS;
+  i2c_initialized = true;
 }
 
 void CardputerSpeaker::initI2S() {
@@ -40,6 +43,8 @@ void CardputerSpeaker::initI2S() {
 
   i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
   i2s_set_pin(I2S_NUM_0, &pin_config);
+
+  i2s_initialized = true;
 }
 
 bool CardputerSpeaker::writeReg(uint8_t reg, uint8_t val) {
@@ -49,47 +54,77 @@ bool CardputerSpeaker::writeReg(uint8_t reg, uint8_t val) {
   return Wire1.endTransmission() == 0;
 }
 
-void CardputerSpeaker::sleep()
-{
-  writeReg(0x00, 0x7F); // 0x00 RESET/  CSM POWER DOWN
+void CardputerSpeaker::begin() {
+  if (!i2s_initialized) {
+    initI2S();
+  }
+
+  if (!i2c_initialized) {
+    initI2C();
+  }
 }
 
-void CardputerSpeaker::wake() {
-  writeReg(0x00, 0x80); // 0x00 RESET/  CSM POWER ON
-}
+void CardputerSpeaker::playTone(int32_t frequency_hz, uint32_t duration_ms, float volume) {
+  begin();
 
-void CardputerSpeaker::playTone(float frequency_hz, uint32_t duration_ms, float volume)
-{
-    static double current_phase = 0.0;
+  static double current_phase = 0.0;
 
-    const double phase_increment = 2.0 * M_PI * frequency_hz / AUDIO_SAMPLE_RATE;
-    const int16_t target_amplitude = static_cast<int16_t>(volume * AUDIO_MAX_SAFE_VOLUME);
+  const double phase_increment = 2.0 * M_PI * frequency_hz / AUDIO_SAMPLE_RATE;
+  const int16_t target_amplitude = static_cast<int16_t>(volume * AUDIO_MAX_SAFE_VOLUME);
 
-    uint64_t total_samples_to_play = (uint64_t)AUDIO_SAMPLE_RATE * duration_ms / 1000ULL;
-    uint64_t samples_played = 0;
+  uint64_t total_samples_to_play = (uint64_t)AUDIO_SAMPLE_RATE * duration_ms / 1000ULL;
+  uint64_t samples_played = 0;
 
-    int16_t audio_buffer[AUDIO_BUFFER_SIZE];
-    size_t bytes_written;
+  int16_t audio_buffer[AUDIO_BUFFER_SIZE];
+  size_t bytes_written;
 
-    while (samples_played < total_samples_to_play)
-    {
-        uint64_t remaining_samples = total_samples_to_play - samples_played;
-        int samples_in_chunk =
-            (int)(remaining_samples < AUDIO_BUFFER_SIZE ? remaining_samples : AUDIO_BUFFER_SIZE);
+  while (samples_played < total_samples_to_play) {
+    uint64_t remaining_samples = total_samples_to_play - samples_played;
+    int samples_in_chunk =
+        (int)(remaining_samples < AUDIO_BUFFER_SIZE ? remaining_samples : AUDIO_BUFFER_SIZE);
 
-        for (int i = 0; i < samples_in_chunk; ++i)
-        {
-            audio_buffer[i] = static_cast<int16_t>(sin(current_phase) * target_amplitude);
+    for (int i = 0; i < samples_in_chunk; ++i) {
+      audio_buffer[i] = static_cast<int16_t>(sin(current_phase) * target_amplitude);
 
-            current_phase += phase_increment;
-            if (current_phase >= 2.0 * M_PI)
-            {
-                current_phase -= 2.0 * M_PI;
-            }
-        }
-
-        i2s_write(I2S_NUM_0, audio_buffer, samples_in_chunk * sizeof(int16_t), &bytes_written, portMAX_DELAY);
-
-        samples_played += samples_in_chunk;
+      current_phase += phase_increment;
+      if (current_phase >= 2.0 * M_PI) {
+        current_phase -= 2.0 * M_PI;
+      }
     }
+
+    i2s_write(I2S_NUM_0, audio_buffer, samples_in_chunk * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+
+    samples_played += samples_in_chunk;
+  }
+}
+
+void CardputerSpeaker::sleep() {
+  if (i2c_initialized) {
+    writeReg(0x0E, 0xFF); // SYSTEM
+    writeReg(0x12, 0x02); // SYSTEM
+    writeReg(0x0D, 0xFA); // POWER
+    i2c_initialized = false;
+  }
+
+  if (i2s_initialized) {
+    i2s_driver_uninstall(I2S_NUM_0);
+    i2s_initialized = false;
+  }
+}
+
+void CardputerSpeaker::queueTone(int32_t frequency_hz, uint32_t duration_ms, float volume) {
+  begin();
+  queue_tone.frequency_hz = frequency_hz;
+  queue_tone.duration_ms = duration_ms;
+  queue_tone.volume = volume;
+  queue_tone.done = false;
+}
+
+void CardputerSpeaker::processQueue() {
+  if (!queue_tone.done) {
+    if (millis() > busy_time) {
+      queue_tone.done = true;
+      playTone(queue_tone.frequency_hz, queue_tone.duration_ms, queue_tone.volume);
+    }
+  }
 }

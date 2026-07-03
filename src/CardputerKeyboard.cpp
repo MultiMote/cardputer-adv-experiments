@@ -51,11 +51,12 @@ Keyboard::Event CardputerKeyboard::poll() {
     uint8_t key_index = ((e - 1) / 10) * 8 + ((e - 1) % 10) + 1;
     Keyboard::Key key = static_cast<Keyboard::Key>(key_index);
 
+    result.down = down;
+    
     if (isModifier(key)) {
       updateModifier(key, down);
     } else {
       result.key = key;
-      result.down = down;
     }
   }
 
