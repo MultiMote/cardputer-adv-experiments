@@ -1,5 +1,10 @@
 #pragma once
 
+/** Max utf-8 character length for keyboard key */
+#define KB_LAYOUT_CHAR_MAX 3
+#define KB_LAYOUT_MAIN_FILE "/keyboard-main.txt"
+#define KB_LAYOUT_ALT_FILE "/keyboard-alt.txt"
+
 // ================== PINS ==================
 
 // Cap LoRa-1262 IO expander, audio codec (ES8311), keyboard (TCA8418)
@@ -8,6 +13,7 @@
 
 // Cap LoRa-1262 IO expander
 #define LORA_IOE_I2C_ADDRESS                     0x43
+#define PIN_LORA_NSS                             5
 
 // LCD (ST7789V2)
 #define TFT_SPI_HOST                             SPI3_HOST
@@ -33,3 +39,10 @@
 // Keyboard (TCA8418)
 #define KEYBOARD_I2C_ADDRESS                     0x34
 #define PIN_KEYBOARD_INT                         11
+
+
+// SD CARD and expansion port
+#define PIN_SD_SPI_CS                            12
+#define PIN_SPI_SCK                              40
+#define PIN_SPI_MISO                             39
+#define PIN_SPI_MOSI                             14

@@ -126,8 +126,6 @@ struct Event {
   Modifiers modifiers;
 };
 
-}; // namespace Keyboard
-
 class CardputerKeyboard {
 private:
   Adafruit_TCA8418 tio;
@@ -140,3 +138,7 @@ public:
   void begin();
   Keyboard::Event poll();
 };
+
+}; // namespace Keyboard
+
+using Keyboard::CardputerKeyboard;

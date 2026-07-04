@@ -1,0 +1,5 @@
+
+Language: Cpp
+InsertBraces: true
+ColumnLimit:     110
+IndentCaseLabels: true

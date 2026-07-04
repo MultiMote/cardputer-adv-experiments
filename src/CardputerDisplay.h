@@ -22,7 +22,6 @@ private:
 public:
   CardputerDisplay() {}
   bool begin();
-  void tryLoadUserFont();
 
   bool isOn() { return _isOn; };
   void turnOn();
