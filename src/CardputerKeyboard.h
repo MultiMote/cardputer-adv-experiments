@@ -112,11 +112,11 @@ enum Arrow : uint8_t {
 };
 
 struct Modifiers {
+  bool fn = false;
+  bool ctrl = false;
   bool shift = false;
   bool opt = false;
   bool alt = false;
-  bool ctrl = false;
-  bool fn = false;
 };
 
 struct Event {
